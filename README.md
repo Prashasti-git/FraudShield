@@ -196,5 +196,3 @@ Then open `http://127.0.0.1:5000` in your browser.
 Prashasti
 
 ---
-
-*This project treats fraud detection as a supervised classification problem, deliberately excluding unsupervised/clustering approaches to keep the scope focused — clustering-based anomaly detection is planned as a separate project.*
