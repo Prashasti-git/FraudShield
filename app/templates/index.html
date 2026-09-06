@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FraudShield</title>
+<style>
+    :root {
+        --bg: #0A0E17;
+        --panel: #141B2E;
+        --panel-alt: #0F1524;
+        --border: #232C42;
+        --text: #F1F3F8;
+        --subtext: #8B93A7;
+        --faint: #5A6479;
+        --safe: #22D3B8;
+        --danger: #F43F5E;
+        --accent: #5B7CFF;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        padding: 32px 16px;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        background: var(--accent); box-shadow: 0 0 12px var(--accent);
+    }
+    h1 { font-size: 22px; font-weight: 700; margin: 0; }
+    .subtitle { color: var(--subtext); font-size: 14px; margin: 6px 0 24px 0; }
+
+    .verdict {
+        background: var(--panel); border: 1px solid var(--border);
+        border-radius: 16px; padding: 28px 24px; margin-bottom: 24px;
+        display: flex; flex-direction: column; align-items: center;
+    }
+    .verdict-msg { margin-top: 8px; text-align: center; min-height: 46px; }
+    .verdict-msg .idle, .verdict-msg .loading { color: var(--subtext); font-size: 13px; }
+    .badge {
+        display: inline-block; padding: 6px 14px; border-radius: 999px;
+        font-size: 13px; font-weight: 600;
+    }
+    .badge.fraud { background: rgba(244,63,94,0.15); color: var(--danger); }
+    .badge.normal { background: rgba(34,211,184,0.15); color: var(--safe); }
+    .threshold-note {
+        margin-top: 8px; font-size: 12px; color: var(--faint);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .error-msg { color: var(--danger); font-size: 13px; }
+
+    .panel {
+        background: var(--panel); border: 1px solid var(--border);
+        border-radius: 14px; padding: 20px; margin-bottom: 16px;
+    }
+    .panel h3 {
+        font-size: 13px; font-weight: 600; margin: 0 0 14px 0;
+        padding-left: 10px; border-left: 3px solid var(--accent);
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    label { display: block; font-size: 12px; color: var(--subtext); margin-bottom: 6px; }
+    input, select {
+        width: 100%; padding: 9px 10px; border-radius: 8px;
+        border: 1px solid var(--border); background: var(--panel-alt);
+        color: var(--text); font-size: 14px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    select { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    input:focus, select:focus { outline: 1px solid var(--accent); }
+
+    .flags { display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip {
+        padding: 8px 14px; border-radius: 999px; font-size: 13px;
+        border: 1px solid var(--border); background: var(--panel-alt);
+        color: var(--subtext); cursor: pointer; transition: all 150ms;
+    }
+    .chip.active { border-color: var(--accent); background: rgba(91,124,255,0.15); color: #C7D2FF; }
+
+    button.submit {
+        width: 100%; padding: 14px; border-radius: 12px; border: none;
+        background: var(--accent); color: #fff; font-size: 15px; font-weight: 600;
+        cursor: pointer; margin-top: 8px;
+    }
+    button.submit:disabled { background: var(--faint); cursor: default; }
+
+    .api-row { margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+    <div class="brand">
+        <div class="dot"></div>
+        <h1>FraudShield</h1>
+    </div>
+    <p class="subtitle">Score a transaction against the trained model in real time.</p>
+
+    <div class="verdict">
+        <svg id="gauge" width="220" height="140" viewBox="0 0 220 140"></svg>
+        <div class="verdict-msg" id="verdictMsg">
+            <span class="idle">Fill in the details below and run a check</span>
+        </div>
+    </div>
+
+    <div class="api-row">
+        <label>API endpoint</label>
+        <input id="apiUrl" value="http://127.0.0.1:5000/predict">
+    </div>
+
+    <form id="txnForm">
+        <div class="panel">
+            <h3>Transaction</h3>
+            <div class="grid">
+                <div>
+                    <label>Amount (USD)</label>
+                    <input type="number" step="0.01" name="amount_usd" value="450.00">
+                </div>
+                <div>
+                    <label>Account balance (USD)</label>
+                    <input type="number" step="0.01" name="account_balance_usd" value="1200.00">
+                </div>
+                <div>
+                    <label>Card type</label>
+                    <select name="card_type"><option>Credit</option><option>Debit</option></select>
+                </div>
+                <div>
+                    <label>Card age (months)</label>
+                    <input type="number" name="card_age_months" value="24">
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>Merchant & channel</h3>
+            <div class="grid">
+                <div>
+                    <label>Merchant category</label>
+                    <select name="merchant_category">
+                        <option>Crypto Exchange</option><option>Gift Cards</option><option>Gaming</option>
+                        <option>Electronics</option><option>Streaming</option><option>Utilities</option>
+                        <option>Healthcare</option><option>Groceries</option><option selected>Online Retail</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Merchant risk score (0-1)</label>
+                    <input type="number" step="0.01" min="0" max="1" name="merchant_risk_score" value="0.3">
+                </div>
+                <div>
+                    <label>Channel</label>
+                    <select name="channel"><option selected>Online</option><option>POS</option><option>ATM</option><option>In-App</option></select>
+                </div>
+                <div>
+                    <label>Device type</label>
+                    <select name="device_type">
+                        <option selected>Mobile</option><option>Desktop</option><option>Tablet</option>
+                        <option>POS Terminal</option><option>Smart Watch</option><option>Chip Reader</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Auth method</label>
+                    <select name="auth_method">
+                        <option>No Authentication</option><option>PIN</option><option selected>Password</option><option>Biometric</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>Behavioral signals</h3>
+            <div class="grid">
+                <div><label>Hours since last transaction</label><input type="number" step="0.1" name="hours_since_last_txn" value="5"></div>
+                <div><label>Transactions in last 24h</label><input type="number" name="txn_count_last_24h" value="2"></div>
+                <div><label>Velocity score (0-1)</label><input type="number" step="0.01" min="0" max="1" name="velocity_score" value="0.3"></div>
+                <div><label>CVV retry count</label><input type="number" name="cvv_retry_count" value="0"></div>
+                <div><label>Prior disputes</label><input type="number" name="prior_disputes" value="0"></div>
+                <div><label>Time of day (0-23)</label><input type="number" min="0" max="23" name="time_of_day_hour" value="14"></div>
+                <div><label>Day of week (0=Mon)</label><input type="number" min="0" max="6" name="day_of_week" value="3"></div>
+                <div><label>Customer age</label><input type="number" name="customer_age" value="35"></div>
+                <div><label>Distance from home (km)</label><input type="number" step="0.1" name="distance_from_home_km" value="10"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>Risk signals</h3>
+            <div class="flags" id="flagsRow">
+                <div class="chip" data-flag="is_new_merchant">New merchant</div>
+                <div class="chip" data-flag="used_vpn">VPN used</div>
+                <div class="chip" data-flag="is_foreign_transaction">Foreign transaction</div>
+                <div class="chip" data-flag="ip_country_mismatch">IP/country mismatch</div>
+                <div class="chip" data-flag="billing_shipping_mismatch">Billing/shipping mismatch</div>
+                <div class="chip" data-flag="is_ai_generated_scam_attempt">AI-generated scam pattern</div>
+            </div>
+        </div>
+
+        <button type="submit" class="submit" id="submitBtn">Run fraud check</button>
+    </form>
+</div>
+
+<script>
+const COLORS = { border: '#232C42', faint: '#5A6479', safe: '#22D3B8', danger: '#F43F5E', text: '#F1F3F8', subtext: '#8B93A7' };
+
+const flagState = {
+    is_new_merchant: false, used_vpn: false, is_foreign_transaction: false,
+    ip_country_mismatch: false, billing_shipping_mismatch: false, is_ai_generated_scam_attempt: false
+};
+
+document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        const flag = chip.dataset.flag;
+        flagState[flag] = !flagState[flag];
+        chip.classList.toggle('active', flagState[flag]);
+        chip.textContent = (flagState[flag] ? '✓ ' : '') + chip.textContent.replace('✓ ', '');
+    });
+});
+
+function drawGauge(probability, threshold, status) {
+    const svg = document.getElementById('gauge');
+    const size = 220, stroke = 16, r = (size - stroke) / 2, cx = size / 2, cy = size / 2;
+    const startAngle = 180, sweepAngle = 180;
+
+    function polar(angleDeg) {
+        const rad = angleDeg * Math.PI / 180;
+        return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+    const p1 = polar(startAngle), p2 = polar(startAngle + sweepAngle);
+    const track = `M ${p1.x} ${p1.y} A ${r} ${r} 0 0 1 ${p2.x} ${p2.y}`;
+
+    const frac = status === 'done' ? Math.min(Math.max(probability, 0), 1) : 0;
+    const arcLen = Math.PI * r;
+    const dash = arcLen * frac;
+    const isFraud = status === 'done' && probability >= threshold;
+    const arcColor = status !== 'done' ? COLORS.faint : (isFraud ? COLORS.danger : COLORS.safe);
+
+    svg.innerHTML = `
+        <path d="${track}" stroke="${COLORS.border}" stroke-width="${stroke}" fill="none" stroke-linecap="round"/>
+        <path d="${track}" stroke="${arcColor}" stroke-width="${stroke}" fill="none" stroke-linecap="round"
+              stroke-dasharray="${dash} ${arcLen}" style="transition: stroke-dasharray 900ms cubic-bezier(0.22,1,0.36,1), stroke 400ms;"/>
+        <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="38" font-weight="700" fill="${COLORS.text}"
+              font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+            ${status === 'done' ? (probability * 100).toFixed(1) + '%' : '--'}
+        </text>
+        <text x="${cx}" y="${cy + 18}" text-anchor="middle" font-size="12" fill="${COLORS.subtext}">
+            fraud probability
+        </text>
+    `;
+}
+
+drawGauge(0, 0.27, 'idle');
+
+const NUMERIC_FIELDS = ['amount_usd','account_balance_usd','card_age_months','merchant_risk_score',
+    'hours_since_last_txn','txn_count_last_24h','velocity_score','cvv_retry_count','prior_disputes',
+    'time_of_day_hour','day_of_week','customer_age','distance_from_home_km'];
+
+document.getElementById('txnForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = document.getElementById('submitBtn');
+    const verdictMsg = document.getElementById('verdictMsg');
+    const apiUrl = document.getElementById('apiUrl').value;
+
+    const payload = {};
+    new FormData(form).forEach((value, key) => {
+        payload[key] = NUMERIC_FIELDS.includes(key) ? parseFloat(value) : value;
+    });
+    Object.entries(flagState).forEach(([k, v]) => { payload[k] = v ? 1 : 0; });
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Scoring…';
+    verdictMsg.innerHTML = '<span class="loading">Scoring transaction…</span>';
+    drawGauge(0, 0.27, 'idle');
+
+    try {
+        const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.error) {
+            verdictMsg.innerHTML = `<span class="error-msg">${data.error}</span>`;
+        } else {
+            drawGauge(data.fraud_probability, data.threshold_used, 'done');
+            const isFraud = data.is_fraud;
+            verdictMsg.innerHTML = `
+                <div class="badge ${isFraud ? 'fraud' : 'normal'}">${isFraud ? 'Flagged as fraud' : 'Looks normal'}</div>
+                <div class="threshold-note">threshold ${(data.threshold_used * 100).toFixed(1)}%</div>
+            `;
+        }
+    } catch (err) {
+        verdictMsg.innerHTML = `<span class="error-msg">Couldn't reach the API. Make sure Flask is running and CORS is enabled.</span>`;
+    }
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Run fraud check';
+});
+</script>
+
+</body>
+</html>
